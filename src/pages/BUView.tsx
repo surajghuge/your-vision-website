@@ -1,7 +1,82 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { businessUnits, agentsAndTools } from "@/data/catalogData";
+import { AgentTool } from "@/types/catalog";
+import { cn } from "@/lib/utils";
+
+const ITEMS_PER_PAGE = 10;
+
+const lifecycleColors: Record<string, string> = {
+  Ideation: "bg-muted text-muted-foreground",
+  POC: "bg-warning/10 text-warning",
+  Development: "bg-accent/10 text-accent",
+  Pilot: "bg-tool/10 text-tool",
+  Production: "bg-success/10 text-success",
+  Retired: "bg-destructive/10 text-destructive",
+};
+
+const PaginatedList = ({ items, title, accentClass }: { items: AgentTool[]; title: string; accentClass: string }) => {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
+  const paginated = items.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className={cn("font-heading text-2xl font-bold", accentClass)}>{items.length}</span>
+          <span className="text-sm font-medium text-foreground">{title}</span>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{page} / {totalPages}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="divide-y divide-border">
+        {paginated.map((item) => (
+          <div key={item.id} className="flex items-center justify-between px-6 py-3 hover:bg-muted/30 transition-colors">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm font-medium text-foreground truncate">{item.name}</span>
+            </div>
+            <Badge variant="secondary" className={cn("text-xs shrink-0 ml-3", lifecycleColors[item.lifecycleStage])}>
+              {item.lifecycleStage}
+            </Badge>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="px-6 py-4 text-sm text-muted-foreground">No items found.</div>
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-1 border-t border-border px-4 py-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Button
+              key={i + 1}
+              variant={page === i + 1 ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8 text-xs"
+              onClick={() => setPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const BUView = () => {
   const { buId } = useParams<{ buId: string }>();
@@ -69,50 +144,10 @@ const BUView = () => {
             {bu.description}
           </p>
 
-          {/* Agent/Tool breakdown */}
+          {/* Agent/Tool breakdown with pagination */}
           <div className="grid gap-6 sm:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <div className="font-heading text-3xl font-bold text-accent">
-                {agents.length}
-              </div>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                AI Agents
-              </div>
-              <ul className="mt-4 space-y-2">
-                {agents.map((a) => (
-                  <li
-                    key={a.id}
-                    className="text-sm text-muted-foreground"
-                  >
-                    • {a.name}{" "}
-                    <span className="text-xs text-muted-foreground/60">
-                      ({a.lifecycleStage})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <div className="font-heading text-3xl font-bold text-tool">
-                {tools.length}
-              </div>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                Tools
-              </div>
-              <ul className="mt-4 space-y-2">
-                {tools.map((t) => (
-                  <li
-                    key={t.id}
-                    className="text-sm text-muted-foreground"
-                  >
-                    • {t.name}{" "}
-                    <span className="text-xs text-muted-foreground/60">
-                      ({t.lifecycleStage})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <PaginatedList items={agents} title="AI Agents" accentClass="text-accent" />
+            <PaginatedList items={tools} title="Tools" accentClass="text-tool" />
           </div>
         </div>
       </section>
